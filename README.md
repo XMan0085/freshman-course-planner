@@ -1,2 +1,133 @@
-# freshman-course-planner
-🎓 A zero-dependency, 100% offline university course planner and GPA goal calculator with smart auto-scheduling, timetable visualization, multi-semester management, and IndexedDB persistence.
+﻿# Freshman Course Planner & GPA Manager v2.2
+# 新生选课与绩点规划工具 v2.2
+
+> 纯前端 · 100% 离线可用 · 零后端 · 隐私完全本地化 · 双重镜像持久化  
+> Pure frontend · 100% offline · No backend · Fully private · Dual-layer storage
+
+---
+
+## ⚡ 快速开始 / Quick Start
+
+1. 使用任何现代浏览器直接打开 `index.html` 即可运行 — 无需安装任何环境，无需 `npm`，无需网络连接。
+2. 首次打开时系统会自动载入精选的示例课程与示例成绩，点击 **⚡ 一键智能排课** 即可生成无冲突课表。
+3. 点击顶栏右侧的 **🌐 语言切换** 可在中英文之间自由切换；点击 **🌙/☀️ 主题按钮** 可在浅色与暗黑模式间无缝切换。
+
+---
+
+## 🌟 核心功能特性 / Features
+
+### 1. 智能排课引擎 (Smart Auto-Planner)
+- **必修优先保障**：必修课程硬性优先排入，保证学期核心通识与专业基石课程不漏选。
+- **冲突秒级检测**：任意时间段重叠的课程即时红色预警，自动阻断冲突选课；手动从备选池添加冲突课程时提供明确提示。
+- **早八规避策略**：智能算法自动对 <= 08:30 的早八课程施加权重惩罚（-15分），优选时间舒适的高质量课程组合。
+- **学分精准逼近**：根据设定的目标学分（支持 6~32 学分步进调节），贪心选填最高综合评分选修课。
+
+### 2. 交互式可视化周课表 (Visual Timetable)
+- **像素级时间轴映射**：以 07:00 ~ 22:00 为基准时间轴，1 分钟 = 1 像素精确高度定位，直观呈现时间分布。
+- **稳定色彩编码**：基于课程唯一 ID 映射固定调色板，增删其他课程不会发生颜色跳变。
+- **移动端单日视图与手势支持**：支持周一至周五标签一键过滤，移动端支持触控左右轻扫（Swipe）顺畅切换星期。
+
+### 3. 多学期档案管理 (Multi-Semester Support)
+- **自由创建学期档案**：支持自定义新增学期（如「大一 下学期」、「大二 第一学期」等）。
+- **独立数据隔离**：每个学期具备完全独立的课程库、排课方案、目标学分以及 GPA 记录。
+- **历史旧学期安全清理**：提供「清理历史旧学期」功能，可按需勾选删除以往学期，释放浏览器存储，保护个人隐私。
+
+### 4. GPA 试算与逆算规划器 (GPA Manager & Target Calculator)
+- **标准 4.0 绩点换算**：支持百分制成绩精确换算 4.0 级分与 ABC 等级，自动计算学分加权平均 GPA。
+- **目标绩点逆向测算 (Target Goal Calculator)**：输入期望达到的总目标 GPA 与后续剩余总学分，系统实时逆算出后续课程必须取得的最低平均绩点，并给出「稳扎稳打 / 需冲刺 / 挑战极大 / 超出极限」的分级建议。
+
+### 5. 双重持久化存储与离线保障 (Dual-Layer Offline Persistence)
+- **LocalStorage + IndexedDB 镜像**：每次状态变更时双重自动保存。针对大容量与结构化需求，内置浏览器原生事务型 IndexedDB 数据库支持。
+- **JSON 全量导入与导出**：一键导出包含多学期、所有课程、排课状态与 GPA 记录的 JSON 备份文件；支持任意设备间平滑迁移。
+
+---
+
+## 🧮 算法与评分规则 / Scoring Algorithm
+
+| 条件 / Condition | 计分 / Score | 说明 / Notes |
+|---|---|---|
+| 基础分 / Base | +50 | 每门有效课程默认基准分 |
+| 必修课程 / Mandatory | +30 | 必修课权重优先 |
+| 早八课程 / Early AM (<=08:30) | -15 | 降低早八课程排入概率 |
+| 时间冲突 / Time Conflict | = 0 | 存在时间重叠直接归零，不可排入 |
+
+---
+
+## 🎯 绩点换算标准 (4.0 标尺) / GPA Scale
+
+| 百分制分数 / Score | 绩点 / GPA | 等级 / Grade |
+|---|---|---|
+| 90 ~ 100 | 4.0 | A |
+| 85 ~ 89  | 3.7 | A- |
+| 82 ~ 84  | 3.3 | B+ |
+| 78 ~ 81  | 3.0 | B |
+| 75 ~ 77  | 2.7 | B- |
+| 72 ~ 74  | 2.3 | C+ |
+| 68 ~ 71  | 2.0 | C |
+| 64 ~ 67  | 1.5 | D+ |
+| 60 ~ 63  | 1.0 | D |
+| < 60     | 0.0 | F (不及格) |
+
+---
+
+## 📂 项目文件结构 / File Structure
+
+```text
+University/
+  index.html   - 应用程序 HTML 结构 (包含语义化标签、模态框、中英双语 data-i18n 属性)
+  style.css    - 现代极简设计系统 (CSS 变量、暗黑模式样式、玻璃拟态、响应式媒体查询)
+  app.js       - 纯原生应用逻辑 (状态管理、排课算法、GPA计算、IndexedDB驱动、事件委托)
+  README.md    - 项目完整说明文档
+```
+
+---
+
+## 💾 存储结构说明 / Storage Schema
+
+### 1. LocalStorage 存储键值
+
+| Key | 类型 / Type | 内容说明 / Description |
+|---|---|---|
+| `fp_lang_v2` | String | 当前语言设置 (`zh` / `en`) |
+| `fp_theme_v2` | String | 当前主题模式 (`light` / `dark`) |
+| `fp_current_sem_v2` | String | 当前选中的活跃学期 ID (如 `sem_default`) |
+| `fp_semesters_v2` | Array | 所有学期元数据列表 `[{ id, nameZh, nameEn, createdAt }]` |
+| `fp_all_sem_data_v2`| Object | 各学期历史隔离数据字典 `{ [semId]: { courses, selectedIds, targetCredits, gpaRecords } }` |
+| `fp_courses_v2` | Array | 当前学期课程库 |
+| `fp_selected_v2`| Array | 当前学期已选入课表的课程 ID 列表 |
+| `fp_target_v2`  | Number | 当前学期目标学分 |
+| `fp_gpa_v2`     | Array | 当前学期录入的 GPA 课程成绩单 |
+
+### 2. IndexedDB 架构
+- **Database Name**: `FreshmanCoursePlannerDB` (Version: 2)
+- **Object Store**: `app_state` (Key: `config_key`)
+- **存储策略**: 与 LocalStorage 形成实时镜像容灾备份，保证结构化存储的健壮性。
+
+---
+
+## 🛠️ 历史版本演进与修复记录 / Changelog
+
+### v2.2 (Batch B - 本次更新)
+- ✅ **暗黑模式支持**：全局 CSS 变量重构，支持一键切换深色主题，并在本地自动记住用户偏好。
+- ✅ **多学期管理**：支持自定义新建学期、多学期独立排课方案、学期一键切换与过期学期清理。
+- ✅ **GPA 目标逆算器**：新增 GPA 目标规划计算器，根据未来剩余学分测算所需最低 GPA 并输出备考建议。
+- ✅ **课表单日视图与滑动交互**：在课表上方提供周一至周五过滤药丸按钮，移动端适配触控轻扫切换。
+- ✅ **浏览器原生 IndexedDB**：引入 IndexedDB 结构化本地数据库，实现双重镜像同步与数据库状态面板。
+- ✅ **课程星级评分系统**：课程录入表单支持 1~5 星个人评星，并在课程卡片中直观展示。
+
+### v2.1 (Batch A)
+- ✅ 修复模态框按钮运行时动态绑定导致的脆弱性，统一声明 `data-action`。
+- ✅ 优化移动端课表高度与滑动容器适配 (`min-height: 280px; max-height: 60vh`)。
+- ✅ 规范 `isConflict` 中对 `day` 字段的字符串强制类型转换，杜绝导入不同格式数据时的隐式 Bug。
+- ✅ 清理 GPA 渲染逻辑中的未引用废弃变量。
+- ✅ 重构课程表单重置逻辑，杜绝时间输入框在重置瞬间的闪烁问题。
+- ✅ 增加移动端导航栏横向滚动边缘渐变指示。
+- ✅ 修复语言切换时表单已填写数据丢失的问题。
+- ✅ 修复备选池手动强制添加时间冲突课程时的静默无提示问题。
+- ✅ 建立基于课程 ID 的稳定颜色映射表，杜绝增删课程导致的色彩晃动。
+
+---
+
+## ⚠️ 免责声明 / Disclaimer
+
+本工具仅为大学新生提供**离线辅助排课与个人学业规划参考**，不代表任何高校教务处真实选课系统数据；最终选课结果、课程学分、上课时间及成绩判定请**务必以各高校官方教务管理系统为准**。

@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="zh-CN" id="html-root">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>新生选课 &amp; GPA 规划工具 | Freshman Course Planner</title>
+  <meta name="description" content="专为大学新生打造的纯前端离线选课排课、时间冲突检测、智能配课与GPA绩点规划工具。无后端、零联网、纯本地存储。">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ============================================================
+       TOAST NOTIFICATION CONTAINER
+       Toasts appear here instead of native alert() dialogs.
+  ============================================================ -->
+  <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="false"></div>
+
+  <!-- ============================================================
+       CUSTOM ALERT MODAL  (replaces native alert())
+  ============================================================ -->
+  <div id="custom-alert-modal" class="modal-backdrop" style="display:none;" role="alertdialog" aria-modal="true">
+    <div class="modal-dialog modal-sm card">
+      <div class="modal-header" id="alert-modal-header">
+        <div class="modal-title-wrap">
+          <span class="modal-icon" id="alert-modal-icon">ℹ️</span>
+          <h3 class="modal-title" id="alert-modal-title" data-i18n="notice">提示</h3>
+        </div>
+      </div>
+      <div class="modal-body" id="alert-modal-body"></div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" id="btn-alert-ok" data-action="alert-ok" data-i18n="ok">确定</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       CUSTOM CONFIRM MODAL  (replaces native confirm())
+  ============================================================ -->
+  <div id="custom-confirm-modal" class="modal-backdrop" style="display:none;" role="alertdialog" aria-modal="true">
+    <div class="modal-dialog modal-sm card">
+      <div class="modal-header modal-header-warning">
+        <div class="modal-title-wrap">
+          <span class="modal-icon">❓</span>
+          <h3 class="modal-title" data-i18n="confirmTitle">确认操作</h3>
+        </div>
+      </div>
+      <div class="modal-body" id="confirm-modal-body"></div>
+      <div class="modal-footer modal-footer-2btn">
+        <button class="btn btn-outline" id="btn-confirm-no"  data-action="confirm-no"  data-i18n="cancel">取消</button>
+        <button class="btn btn-danger"  id="btn-confirm-yes" data-action="confirm-yes" data-i18n="confirmYes">确认</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       MANDATORY CONFLICT DETAIL MODAL
+  ============================================================ -->
+  <div id="conflict-modal" class="modal-backdrop" style="display:none;" role="alertdialog" aria-modal="true">
+    <div class="modal-dialog card">
+      <div class="modal-header modal-header-danger">
+        <div class="modal-title-wrap">
+          <span class="modal-icon">⚠️</span>
+          <h3 class="modal-title" data-i18n="conflictTitle">必修课时间冲突警报</h3>
+        </div>
+        <button class="modal-close" id="btn-close-conflict" data-action="close-conflict" aria-label="关闭">&times;</button>
+      </div>
+      <div class="modal-body" id="conflict-modal-body"></div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" id="btn-conflict-ok" data-action="conflict-ok" data-i18n="iKnow">我知道了，去调整</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       NEW SEMESTER MODAL (Batch B)
+  ============================================================ -->
+  <div id="modal-new-semester" class="modal-backdrop" style="display:none;" role="dialog" aria-modal="true">
+    <div class="modal-dialog modal-sm card">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <span class="modal-icon">📅</span>
+          <h3 class="modal-title" data-i18n="newSemModalTitle">新建学期档案</h3>
+        </div>
+        <button class="modal-close" data-action="close-new-sem" aria-label="关闭">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="input-new-sem-name" class="form-label" data-i18n="newSemNameLabel">学期名称</label>
+          <input type="text" id="input-new-sem-name" class="form-input" placeholder="如: 大一 下学期 (2025春)" maxlength="30">
+        </div>
+      </div>
+      <div class="modal-footer modal-footer-2btn">
+        <button class="btn btn-outline" data-action="close-new-sem" data-i18n="cancel">取消</button>
+        <button class="btn btn-primary" data-action="confirm-new-sem" data-i18n="confirmCreate">创建并切换</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       CLEAN PAST SEMESTERS MODAL (Batch B)
+  ============================================================ -->
+  <div id="modal-clean-semesters" class="modal-backdrop" style="display:none;" role="dialog" aria-modal="true">
+    <div class="modal-dialog card">
+      <div class="modal-header modal-header-warning">
+        <div class="modal-title-wrap">
+          <span class="modal-icon">🧹</span>
+          <h3 class="modal-title" data-i18n="cleanSemTitle">清理历史旧学期数据</h3>
+        </div>
+        <button class="modal-close" data-action="close-clean-sem" aria-label="关闭">&times;</button>
+      </div>
+      <div class="modal-body" id="clean-sem-list-container">
+        <!-- Semester list checkboxes rendered by JS -->
+      </div>
+      <div class="modal-footer modal-footer-2btn">
+        <button class="btn btn-outline" data-action="close-clean-sem" data-i18n="cancel">取消</button>
+        <button class="btn btn-danger" data-action="confirm-delete-semesters" data-i18n="confirmDeleteSelected">删除所选历史学期</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       APP HEADER
+  ============================================================ -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand">
+        <div class="brand-icon">🎓</div>
+        <div class="brand-text">
+          <h1 class="brand-title" data-i18n="appTitle">新生选课 &amp; GPA 规划工具</h1>
+          <p class="brand-subtitle" data-i18n="appSubtitle">零基础 · 纯离线 · 劳逸结合 · 科学排课</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <!-- Autosave indicator — flashes whenever data is saved -->
+        <div class="autosave-indicator" id="autosave-indicator" aria-live="polite">
+          <div class="autosave-dot"></div>
+          <span id="autosave-text" data-i18n="autosaved">已自动保存</span>
+        </div>
+
+        <!-- Semester Selector (Batch B) -->
+        <div class="semester-bar" id="semester-bar">
+          <span class="semester-label" data-i18n="semesterLabel">学期:</span>
+          <select id="semester-select" class="semester-select" aria-label="选择学期"></select>
+          <button id="btn-new-semester" class="btn btn-outline btn-sm-icon" title="新建学期 / New Semester" data-action="open-new-sem">➕</button>
+        </div>
+
+        <!-- Theme toggle & Language toggle (Batch B) -->
+        <div class="header-toggles">
+          <button id="theme-toggle" class="btn btn-outline btn-sm theme-toggle" title="Switch Theme / 切换主题" aria-label="切换主题" data-action="toggle-theme">
+            <span id="theme-toggle-icon">🌙</span> <span id="theme-toggle-label">暗黑</span>
+          </button>
+          <button id="btn-lang-toggle" class="btn btn-outline btn-sm lang-toggle" title="Switch Language / 切换语言" aria-label="切换语言">
+            🌐 <span id="lang-toggle-label">English</span>
+          </button>
+        </div>
+
+        <span class="badge badge-offline" data-i18n="offlineBadge">🟢 纯本地离线</span>
+        <button id="btn-load-demo" class="btn btn-secondary btn-sm" data-i18n="loadDemo">⚡ 示例课表</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============================================================
+       MAIN CONTENT
+  ============================================================ -->
+  <main class="app-main container">
+
+    <!-- NAV TABS -->
+    <nav class="nav-tabs" role="tablist" aria-label="主要功能切换">
+      <button class="tab-btn active" data-tab="tab-planner" role="tab" aria-selected="true" aria-controls="tab-planner">
+        <span class="tab-icon">🎯</span>
+        <span data-i18n="tabPlanner">智能选课规划</span>
+      </button>
+      <button class="tab-btn" data-tab="tab-courses" role="tab" aria-selected="false" aria-controls="tab-courses">
+        <span class="tab-icon">📋</span>
+        <span data-i18n="tabCourses">课程录入与仓库</span>
+        <span id="course-count-badge" class="pill-count">0</span>
+      </button>
+      <button class="tab-btn" data-tab="tab-gpa" role="tab" aria-selected="false" aria-controls="tab-gpa">
+        <span class="tab-icon">📊</span>
+        <span data-i18n="tabGPA">GPA 绩点管家</span>
+      </button>
+      <button class="tab-btn" data-tab="tab-data" role="tab" aria-selected="false" aria-controls="tab-data">
+        <span class="tab-icon">⚙️</span>
+        <span data-i18n="tabData">数据与说明</span>
+      </button>
+    </nav>
+
+    <!-- ===== TAB 1: SMART PLANNER ===== -->
+    <section id="tab-planner" class="tab-pane active" role="tabpanel">
+
+      <!-- Target credits control card -->
+      <div class="planner-control-card card glass-panel">
+        <div class="control-header">
+          <div>
+            <h2 class="section-title" data-i18n="plannerTitle">🌱 新生友好智能配课</h2>
+            <p class="section-desc" data-i18n="plannerDesc">算法优先保障必修课，不超额堆课，按打分智能挑选高品质选修，兼顾课业与休息。</p>
+          </div>
+          <div class="guidance-tip" data-i18n-html="creditGuidance">
+            💡 <strong>新生参考学分：</strong>建议 <strong>12 ~ 18</strong> 学分/学期
+          </div>
+        </div>
+        <div class="target-credit-row">
+          <div class="credit-input-group">
+            <label for="target-credit-input" class="form-label" data-i18n="targetCredit">本学期目标学分：</label>
+            <div class="input-with-stepper">
+              <button type="button" class="btn-step" id="btn-decrease-credit" aria-label="减少学分">−</button>
+              <input type="number" id="target-credit-input" class="form-input credit-number-input"
+                     min="6" max="32" step="0.5" value="16" aria-label="目标学分">
+              <button type="button" class="btn-step" id="btn-increase-credit" aria-label="增加学分">+</button>
+              <span class="unit-text" data-i18n="credits">学分</span>
+            </div>
+          </div>
+          <div class="planner-action-btns">
+            <button id="btn-run-auto-plan" class="btn btn-primary btn-lg shadow-btn" data-i18n="autoplan">
+              ⚡ 一键智能排课
+            </button>
+            <button id="btn-clear-plan" class="btn btn-outline" data-i18n="resetPlan">重置已选</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dashboard metrics -->
+      <div class="dashboard-grid">
+        <div class="metric-card card">
+          <div class="metric-icon bg-blue-light">📚</div>
+          <div class="metric-content">
+            <div class="metric-label" data-i18n="metricCredits">当前方案总学分</div>
+            <div class="metric-value">
+              <span id="metric-current-credits">0</span>
+              <small>/ <span id="metric-target-credits">16</span></small>
+            </div>
+            <div class="metric-progress-bar">
+              <div id="credit-progress-fill" class="progress-fill" style="width:0%"></div>
+            </div>
+          </div>
+        </div>
+        <div class="metric-card card">
+          <div class="metric-icon bg-indigo-light">📖</div>
+          <div class="metric-content">
+            <div class="metric-label" data-i18n="metricDistribution">课程数量分布</div>
+            <div class="metric-value">
+              <span id="metric-mandatory-count">0</span>
+              <span class="metric-subtext" data-i18n="mandatory">必修</span>
+              + <span id="metric-elective-count">0</span>
+              <span class="metric-subtext" data-i18n="elective">选修</span>
+            </div>
+            <div class="metric-footnote">
+              <span data-i18n="totalSelected">共已选</span>
+              <strong id="metric-total-courses">0</strong>
+              <span data-i18n="coursesUnit">门课</span>
+            </div>
+          </div>
+        </div>
+        <div class="metric-card card">
+          <div class="metric-icon bg-amber-light" id="stress-icon">🧘</div>
+          <div class="metric-content">
+            <div class="metric-label" data-i18n="metricStress">课业压力与劳逸评估</div>
+            <div class="stress-badge" id="stress-level-badge">—</div>
+            <p class="stress-tip" id="stress-description">请先点击「一键智能排课」</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====== VISUAL TIMETABLE (shown after auto-plan) ====== -->
+      <div class="timetable-section card" id="timetable-section" style="display:none;">
+        <div class="section-header-row">
+          <div>
+            <h3 class="section-title" data-i18n="timetableTitle">📅 本周课程时间表</h3>
+            <span class="section-subtitle" data-i18n="timetableSubtitle">已选课程 · 可视化日程</span>
+          </div>
+          <div class="timetable-legend">
+            <span class="legend-item"><span class="legend-dot legend-mandatory"></span><span data-i18n="mandatory">必修</span></span>
+            <span class="legend-item"><span class="legend-dot legend-elective"></span><span data-i18n="elective">选修</span></span>
+          </div>
+        </div>
+
+        <!-- Day view switcher (Batch B - Mobile friendly) -->
+        <div class="tt-view-controls">
+          <div class="tt-day-pills" id="tt-day-pills">
+            <button class="tt-day-pill active" data-day-view="all" data-i18n="dayAll">全部 (5天)</button>
+            <button class="tt-day-pill" data-day-view="1" data-i18n="dayMon">周一</button>
+            <button class="tt-day-pill" data-day-view="2" data-i18n="dayTue">周二</button>
+            <button class="tt-day-pill" data-day-view="3" data-i18n="dayWed">周三</button>
+            <button class="tt-day-pill" data-day-view="4" data-i18n="dayThu">周四</button>
+            <button class="tt-day-pill" data-day-view="5" data-i18n="dayFri">周五</button>
+          </div>
+        </div>
+
+        <div class="timetable-wrapper" id="timetable-wrapper" data-day-focus="all">
+          <!-- Day headers row -->
+          <div class="tt-header-row">
+            <div class="tt-corner"></div>
+            <div class="tt-day-header" data-i18n="dayMon">周一</div>
+            <div class="tt-day-header" data-i18n="dayTue">周二</div>
+            <div class="tt-day-header" data-i18n="dayWed">周三</div>
+            <div class="tt-day-header" data-i18n="dayThu">周四</div>
+            <div class="tt-day-header" data-i18n="dayFri">周五</div>
+          </div>
+          <!-- Timetable body (scrollable) -->
+          <div class="tt-scroll-container">
+            <div class="tt-body-inner">
+              <!-- Time labels column -->
+              <div class="tt-time-col" id="tt-time-col"></div>
+              <!-- Five day columns with course blocks rendered by JS -->
+              <div class="tt-days-area">
+                <div class="tt-day-col" id="tt-col-1"></div>
+                <div class="tt-day-col" id="tt-col-2"></div>
+                <div class="tt-day-col" id="tt-col-3"></div>
+                <div class="tt-day-col" id="tt-col-4"></div>
+                <div class="tt-day-col" id="tt-col-5"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Selected vs Backup two-column layout -->
+      <div class="plan-columns-grid">
+        <div class="plan-column">
+          <div class="column-header">
+            <h3 class="column-title">
+              <span data-i18n="selectedCourses">✅ 已选定方案课程</span>
+              (<span id="selected-list-count">0</span>)
+            </h3>
+            <span class="column-tag" data-i18n="conflictPassed">实时冲突检测已通过</span>
+          </div>
+          <div id="selected-courses-container" class="course-card-list">
+            <div class="empty-state" id="empty-selected">
+              <div class="empty-icon">📝</div>
+              <p data-i18n="emptySelectedTitle">暂无已选课程</p>
+              <p class="empty-hint" data-i18n="emptySelectedHint">点击上方「一键智能排课」开始配课</p>
+            </div>
+          </div>
+        </div>
+        <div class="plan-column">
+          <div class="column-header">
+            <h3 class="column-title">
+              <span data-i18n="backupPool">💡 优质备选池</span>
+              (<span id="backup-list-count">0</span>)
+            </h3>
+            <span class="column-tag tag-sub" data-i18n="backupHint">未入选课程 · 点击手动加入</span>
+          </div>
+          <div id="backup-courses-container" class="course-card-list">
+            <div class="empty-state" id="empty-backup">
+              <div class="empty-icon">🗂️</div>
+              <p data-i18n="emptyBackupTitle">备选池为空</p>
+              <p class="empty-hint" data-i18n="emptyBackupHint">当仓库有更多选修课时，未入选的高分课程会在此显示</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== TAB 2: COURSE REPOSITORY ===== -->
+    <section id="tab-courses" class="tab-pane" role="tabpanel">
+      <div class="course-management-layout">
+
+        <!-- Left: Entry Form -->
+        <div class="form-card card glass-panel">
+          <div class="card-header">
+            <h2 class="section-title" data-i18n="formTitle">✏️ 新增 / 编辑课程</h2>
+            <p class="section-desc" data-i18n="formDesc">手动逐条录入（无需联网，刷新不丢失）</p>
+          </div>
+          <form id="course-form" class="custom-form" novalidate>
+            <input type="hidden" id="form-course-id" value="">
+
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label for="course-code" class="form-label">
+                  <span data-i18n="labelCode">科目代码</span>
+                  <span class="required">*</span>
+                </label>
+                <input type="text" id="course-code" class="form-input"
+                       data-i18n-placeholder="phCode" placeholder="如: MATH1001">
+              </div>
+              <div class="form-group flex-2">
+                <label for="course-name" class="form-label">
+                  <span data-i18n="labelName">科目名称</span>
+                  <span class="required">*</span>
+                </label>
+                <input type="text" id="course-name" class="form-input"
+                       data-i18n-placeholder="phName" placeholder="如: 高等数学 (A)">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label for="course-credits" class="form-label">
+                  <span data-i18n="labelCredits">学分</span>
+                  <span class="required">*</span>
+                </label>
+                <input type="number" id="course-credits" class="form-input"
+                       min="0.5" max="15" step="0.5" placeholder="4.0">
+              </div>
+              <div class="form-group flex-1">
+                <label for="course-day" class="form-label">
+                  <span data-i18n="labelDay">上课星期</span>
+                  <span class="required">*</span>
+                </label>
+                <select id="course-day" class="form-select">
+                  <option value="1" data-i18n-opt="dayMonOpt">星期一 (Mon)</option>
+                  <option value="2" data-i18n-opt="dayTueOpt">星期二 (Tue)</option>
+                  <option value="3" data-i18n-opt="dayWedOpt">星期三 (Wed)</option>
+                  <option value="4" data-i18n-opt="dayThuOpt">星期四 (Thu)</option>
+                  <option value="5" data-i18n-opt="dayFriOpt">星期五 (Fri)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label for="course-start-time" class="form-label">
+                  <span data-i18n="labelStart">开始时间</span>
+                  <span class="required">*</span>
+                </label>
+                <input type="time" id="course-start-time" class="form-input" value="08:00">
+              </div>
+              <div class="form-group flex-1">
+                <label for="course-end-time" class="form-label">
+                  <span data-i18n="labelEnd">结束时间</span>
+                  <span class="required">*</span>
+                </label>
+                <input type="time" id="course-end-time" class="form-input" value="09:40">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" data-i18n="labelAttrs">课程属性</label>
+              <div class="checkbox-group">
+                <label class="custom-check-label" for="course-is-mandatory">
+                  <input type="checkbox" id="course-is-mandatory" class="custom-check-input">
+                  <span class="custom-check-box"></span>
+                  <span class="custom-check-text" data-i18n="attrMandatory">📌 是否必修 (必修优先配课，打分 +30)</span>
+                </label>
+                <label class="custom-check-label" for="course-is-tight">
+                  <input type="checkbox" id="course-is-tight" class="custom-check-input">
+                  <span class="custom-check-box"></span>
+                  <span class="custom-check-text" data-i18n="attrTight">🔥 名额紧张 (仅标识备注，提醒开选即抢)</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="course-rating" class="form-label" data-i18n="labelRating">个人偏好 / 推荐星级 (参与打分权重)</label>
+              <select id="course-rating" class="form-select">
+                <option value="5" data-i18n-opt="star5">⭐⭐⭐⭐⭐ 强烈推荐 / 极度感兴趣 (+10分)</option>
+                <option value="4" data-i18n-opt="star4">⭐⭐⭐⭐ 较为推荐 (+5分)</option>
+                <option value="3" selected data-i18n-opt="star3">⭐⭐⭐ 一般中立 (基础分)</option>
+                <option value="2" data-i18n-opt="star2">⭐⭐ 兴趣较低 (-5分)</option>
+                <option value="1" data-i18n-opt="star1">⭐ 不太想选 (-10分)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="course-remarks" class="form-label" data-i18n="labelRemarks">课程 / 教授备注 (选填)</label>
+              <input type="text" id="course-remarks" class="form-input"
+                     data-i18n-placeholder="phRemarks" placeholder="如: 张老师 / 期末开卷">
+            </div>
+
+            <!-- Inline form error (replaces alert) -->
+            <div class="form-error-box" id="form-error-box" style="display:none;" role="alert">
+              <span class="form-error-icon">⚠️</span>
+              <span id="form-error-text"></span>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" id="btn-save-course" class="btn btn-primary flex-1" data-i18n="saveCourse">
+                ➕ 保存课程到仓库
+              </button>
+              <button type="button" id="btn-cancel-edit" class="btn btn-outline" style="display:none;" data-i18n="cancelEdit">
+                取消编辑
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Right: Repository list -->
+        <div class="repo-card card">
+          <div class="repo-header">
+            <div>
+              <h2 class="section-title">
+                <span data-i18n="repoTitle">📦 全部候选课程库</span>
+                (<span id="repo-total-count">0</span>)
+              </h2>
+              <p class="section-desc" data-i18n="repoDesc">包含打分、冲突预警及优先级标签</p>
+            </div>
+            <div class="repo-filters" role="group" aria-label="课程筛选">
+              <button class="filter-pill active" data-filter="all" data-i18n="filterAll">全部</button>
+              <button class="filter-pill" data-filter="mandatory" data-i18n="filterMandatory">必修</button>
+              <button class="filter-pill" data-filter="elective" data-i18n="filterElective">选修</button>
+              <button class="filter-pill" data-filter="conflict" data-i18n="filterConflict">有冲突</button>
+            </div>
+          </div>
+          <!-- Scoring rule legend -->
+          <div class="scoring-rules-banner">
+            <span class="rule-title" data-i18n="scoringRules">⚡ 自动打分规则：</span>
+            <span class="rule-chip chip-neutral" data-i18n="ruleBase">基础 50</span>
+            <span class="rule-chip chip-green" data-i18n="ruleMandatory">必修 +30</span>
+            <span class="rule-chip chip-amber" data-i18n="ruleMorning">早八 −15</span>
+            <span class="rule-chip chip-red" data-i18n="ruleConflict">冲突 = 0</span>
+          </div>
+          <div id="repo-courses-container" class="repo-course-list">
+            <div class="empty-state">
+              <div class="empty-icon">📂</div>
+              <p data-i18n="emptyRepoTitle">课程库当前为空</p>
+              <p class="empty-hint" data-i18n="emptyRepoHint">在左侧表单输入课程，或点击顶栏「载入示例课表」快速体验</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== TAB 3: GPA MANAGER ===== -->
+    <section id="tab-gpa" class="tab-pane" role="tabpanel">
+      <div class="gpa-overview-grid">
+        <!-- GPA summary hero card -->
+        <div class="gpa-stat-card card glass-panel">
+          <div class="gpa-badge-title" data-i18n="gpaOverview">🎯 学业成绩总览</div>
+          <div class="gpa-main-number">
+            <span id="gpa-cumulative-val">0.00</span>
+            <small>/ 4.00</small>
+          </div>
+          <div class="gpa-sub-metrics">
+            <div class="sub-metric">
+              <span class="sub-label" data-i18n="gpaSubCredits">已修总学分</span>
+              <span class="sub-val" id="gpa-total-credits">0.0</span>
+            </div>
+            <div class="sub-divider"></div>
+            <div class="sub-metric">
+              <span class="sub-label" data-i18n="gpaSubAvg">加权平均分</span>
+              <span class="sub-val" id="gpa-weighted-score">—</span>
+            </div>
+            <div class="sub-divider"></div>
+            <div class="sub-metric">
+              <span class="sub-label" data-i18n="gpaSubCount">已录科目</span>
+              <span class="sub-val" id="gpa-course-count">0</span>
+            </div>
+          </div>
+        </div>
+        <!-- 4.0 conversion table -->
+        <div class="gpa-scale-card card">
+          <h3 class="scale-title" data-i18n="gpaScaleTitle">📐 标准 4.0 分制换算参考表</h3>
+          <div class="scale-table-wrapper">
+            <table class="scale-table">
+              <thead>
+                <tr>
+                  <th data-i18n="colScoreRange">百分制</th>
+                  <th data-i18n="colGP">绩点</th>
+                  <th data-i18n="colGrade">等级</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>90–100</td><td><strong class="text-emerald">4.0</strong></td><td>A / 优秀</td></tr>
+                <tr><td>85–89</td><td><strong class="text-emerald">3.7</strong></td><td>A−</td></tr>
+                <tr><td>82–84</td><td><strong class="text-indigo">3.3</strong></td><td>B+</td></tr>
+                <tr><td>78–81</td><td><strong class="text-indigo">3.0</strong></td><td>B / 良好</td></tr>
+                <tr><td>75–77</td><td><strong class="text-amber">2.7</strong></td><td>B−</td></tr>
+                <tr><td>72–74</td><td><strong class="text-amber">2.3</strong></td><td>C+</td></tr>
+                <tr><td>68–71</td><td><strong class="text-amber">2.0</strong></td><td>C / 中等</td></tr>
+                <tr><td>64–67</td><td><strong class="text-rose">1.5</strong></td><td>D+</td></tr>
+                <tr><td>60–63</td><td><strong class="text-rose">1.0</strong></td><td>D / 及格</td></tr>
+                <tr><td>&lt; 60</td><td><strong class="text-rose">0.0</strong></td><td>F / 不及格</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- GPA entry form + record table -->
+      <div class="gpa-management-layout card">
+        <div class="card-header">
+          <h2 class="section-title" data-i18n="gpaEntryTitle">📝 成绩录入与管理</h2>
+          <p class="section-desc" data-i18n="gpaEntryDesc">支持录入已修课程的分数与学分，实时更新总绩点</p>
+        </div>
+        <form id="gpa-form" class="gpa-inline-form" novalidate>
+          <div class="form-group flex-2">
+            <label for="gpa-course-name" class="form-label" data-i18n="gpaLabelName">科目名称</label>
+            <input type="text" id="gpa-course-name" class="form-input"
+                   data-i18n-placeholder="gpaPhName" placeholder="如: 高等数学上">
+          </div>
+          <div class="form-group flex-1">
+            <label for="gpa-course-credits" class="form-label" data-i18n="gpaLabelCredits">学分</label>
+            <input type="number" id="gpa-course-credits" class="form-input"
+                   min="0.5" max="15" step="0.5" placeholder="4.0">
+          </div>
+          <div class="form-group flex-1">
+            <label for="gpa-course-score" class="form-label" data-i18n="gpaLabelScore">成绩 (0-100)</label>
+            <input type="number" id="gpa-course-score" class="form-input"
+                   min="0" max="100" step="0.5" placeholder="88">
+          </div>
+          <div class="form-group form-btn-align">
+            <button type="submit" class="btn btn-primary" data-i18n="addRecord">➕ 录入成绩</button>
+          </div>
+        </form>
+
+        <div class="gpa-table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th data-i18n="gpaColName">科目名称</th>
+                <th data-i18n="gpaColCredits">学分</th>
+                <th data-i18n="gpaColScore">原始成绩</th>
+                <th data-i18n="gpaColGP">绩点 (4.0)</th>
+                <th data-i18n="gpaColWeighted">加权绩点分</th>
+                <th data-i18n="gpaColAction">操作</th>
+              </tr>
+            </thead>
+            <tbody id="gpa-tbody"></tbody>
+          </table>
+          <div id="gpa-empty-state" class="empty-state">
+            <div class="empty-icon">📊</div>
+            <p data-i18n="gpaEmpty">暂无成绩记录</p>
+            <p class="empty-hint" data-i18n="gpaEmptyHint">在上方输入已修课程成绩，体验自动计算 GPA！</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- GPA Target Goal Calculator Card (Batch B) -->
+      <div class="gpa-target-calc-card card">
+        <div class="card-header">
+          <div class="modal-title-wrap">
+            <span class="modal-icon">🎯</span>
+            <div>
+              <h2 class="section-title" data-i18n="calcGoalTitle">目标绩点逆算规划器 (GPA Target Calculator)</h2>
+              <p class="section-desc" data-i18n="calcGoalDesc">输入你的期望目标 GPA 及后续剩余待修学分，自动逆算未来每门课需要达到的均分要求与可行性评估。</p>
+            </div>
+          </div>
+        </div>
+        <div class="calc-grid">
+          <div class="calc-inputs-col">
+            <div class="form-group">
+              <label for="target-gpa-val" class="form-label" data-i18n="calcLabelTargetGpa">期望总绩点目标 (Target GPA, 0-4.0)</label>
+              <input type="number" id="target-gpa-val" class="form-input" min="1.0" max="4.0" step="0.05" value="3.70">
+            </div>
+            <div class="form-group">
+              <label for="target-rem-credits" class="form-label" data-i18n="calcLabelRemCredits">后续剩余待修总学分 (Remaining Credits)</label>
+              <input type="number" id="target-rem-credits" class="form-input" min="1" max="150" step="0.5" value="16.0">
+            </div>
+            <button type="button" id="btn-calc-gpa-goal" class="btn btn-primary" data-action="calc-gpa-goal" data-i18n="btnCalcGoal">
+              ⚡ 立即逆算分析
+            </button>
+          </div>
+          <div class="calc-result-box" id="calc-result-box">
+            <div class="text-sub" data-i18n="calcResultHeader">后续课程所需最低平均绩点</div>
+            <div class="calc-target-val" id="calc-req-gp">—</div>
+            <div id="calc-status-chip" class="calc-needed-chip badge-mod">—</div>
+            <p class="calc-advice" id="calc-advice-text">请输入目标绩点与剩余学分进行逆算分析</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== TAB 4: DATA & GUIDE ===== -->
+    <section id="tab-data" class="tab-pane" role="tabpanel">
+      <div class="grid-2-col">
+        <div class="card">
+          <h2 class="section-title" data-i18n="dataTitle">💾 本地数据备份与恢复</h2>
+          <p class="section-desc" data-i18n="dataDesc">所有数据均存储在您的浏览器 LocalStorage 中，数据完全私密不上传。</p>
+          <div class="data-action-block">
+            <div class="action-item">
+              <div>
+                <strong data-i18n="exportTitle">导出备份文件 (JSON)</strong>
+                <p class="text-sub" data-i18n="exportDesc">将当前所有课程、方案及 GPA 数据导出为本地文件保存。</p>
+              </div>
+              <button id="btn-export-json" class="btn btn-secondary" data-i18n="exportBtn">📥 导出数据</button>
+            </div>
+            <div class="action-item">
+              <div>
+                <strong data-i18n="importTitle">导入备份数据</strong>
+                <p class="text-sub" data-i18n="importDesc">选择之前导出的 JSON 文件恢复全部数据。</p>
+              </div>
+              <div>
+                <input type="file" id="file-import-json" accept=".json" style="display:none;" aria-label="选择JSON文件">
+                <button id="btn-trigger-import" class="btn btn-secondary" data-i18n="importBtn">📤 导入备份</button>
+              </div>
+            </div>
+            <div class="action-item danger-zone">
+              <div>
+                <strong class="text-danger" data-i18n="resetTitle">清空所有本地数据</strong>
+                <p class="text-sub" data-i18n="resetDesc">清除所有录入的课程、排课方案和 GPA 记录，恢复初始状态。</p>
+              </div>
+              <button id="btn-reset-all" class="btn btn-danger" data-i18n="resetBtn">🗑️ 清空数据</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Database & Pruning Card (Batch B) -->
+        <div class="card">
+          <h2 class="section-title" data-i18n="dbCardTitle">🗄️ 浏览器数据库 (IndexedDB)</h2>
+          <p class="section-desc" data-i18n="dbCardDesc">纯本地结构化事务数据库，数据持久保存，无需上传云端；支持灵活清理历史学期。</p>
+          
+          <div class="db-status-banner">
+            <div class="db-status-text">
+              <span>🟢</span>
+              <span id="idb-status-text" data-i18n="idbStatusActive">IndexedDB: 运行正常 · 双重镜像持久化</span>
+            </div>
+          </div>
+
+          <div class="db-stat-chips">
+            <div class="db-stat-chip">
+              <span data-i18n="dbChipSemesters">学期数:</span> <strong id="db-stat-semesters">1</strong>
+            </div>
+            <div class="db-stat-chip">
+              <span data-i18n="dbChipCourses">课程总计:</span> <strong id="db-stat-courses">0</strong>
+            </div>
+            <div class="db-stat-chip">
+              <span data-i18n="dbChipGpa">成绩记录:</span> <strong id="db-stat-gpa">0</strong>
+            </div>
+          </div>
+
+          <div class="data-action-block">
+            <div class="action-item">
+              <div>
+                <strong data-i18n="cleanPastTitle">清理历史旧学期数据</strong>
+                <p class="text-sub" data-i18n="cleanPastDesc">满足「无需长期保存以往数据」需求，保留当前活跃学期，安全释放历史缓存。</p>
+              </div>
+              <button id="btn-clean-semesters" class="btn btn-secondary" data-action="open-clean-sem" data-i18n="btnCleanPast">🧹 清理旧学期</button>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <h2 class="section-title" data-i18n="guideTitle">📖 新生选课新手指南</h2>
+          <div class="tips-list">
+            <div class="tip-card">
+              <div class="tip-num">1</div>
+              <div class="tip-text">
+                <strong data-i18n="tip1Title">必修课永远第一优先：</strong>
+                <span data-i18n="tip1Body">必修课通常是后续高年级核心专业课的前置课程，大一务必优先修读完。</span>
+              </div>
+            </div>
+            <div class="tip-card">
+              <div class="tip-num">2</div>
+              <div class="tip-text">
+                <strong data-i18n="tip2Title">新生切忌「盲目堆学分」：</strong>
+                <span data-i18n="tip2Body">大一第一学期保持在 14~18 学分最利于稳住 GPA 和适应大学节奏。</span>
+              </div>
+            </div>
+            <div class="tip-card">
+              <div class="tip-num">3</div>
+              <div class="tip-text">
+                <strong data-i18n="tip3Title">警惕「早八」与时间冲突：</strong>
+                <span data-i18n="tip3Body">工具已自动将 08:00 开课的早八课扣减 15 分，并对时间重叠课程进行红牌标记。</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main><!-- /app-main -->
+
+  <!-- ============================================================
+       FOOTER — Mandatory disclaimer (always visible)
+  ============================================================ -->
+  <footer class="app-footer">
+    <div class="footer-container">
+      <div class="disclaimer-badge" data-i18n="disclaimerBadge">⚠️ 免责声明</div>
+      <p class="disclaimer-text" data-i18n-html="disclaimerText">
+        本工具仅为大学新生提供<strong>离线辅助排课与个人规划参考</strong>，不代表任何学校真实选课系统数据；一切以<strong>校方官方教务系统为准</strong>。
+      </p>
+      <div class="footer-copy" data-i18n="footerCopy">© 新生选课&amp;GPA规划工具 · 纯前端纯本地 LocalStorage 驱动</div>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
